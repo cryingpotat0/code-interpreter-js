@@ -9,9 +9,11 @@ import { files } from "./InnerReactWrapper";
 const CodeBlock = () => {
     const onChange = useCallback((_value: string, _viewUpdate) => {
     }, []);
-    const [_result, setResult] = useState<string | undefined>(undefined);
+    const src_victory_js = files['src']['directory']['victory.js']['file']['contents'];
+    const [result, setResult] = useState<string>(src_victory_js);
     const [url, setUrl] = useState<string | undefined>(undefined);
     const [webContainer, setWebContainer] = useState<WebContainer | undefined>(undefined);
+    const [termOutput, setTermOutput] = useState<string | undefined>(undefined);
 
     useEffect(() => {
         (async () => {
@@ -36,9 +38,21 @@ const CodeBlock = () => {
                     setUrl(url);
                 });
                 console.log('waiting for run');
-                if (await runProcess.exit !== 0) {
-                    throw new Error(`Failed to run: ${JSON.stringify(await runProcess.output.getReader().read())}`);
-                }
+                // Read the readable stream of runProcess
+                const reader = runProcess.output.getReader();
+                setInterval(async () => {
+                    const { done, value } = await reader.read()
+
+                    // When no more data needs to be consumed, break the loop.
+                    if (done) {
+                        reader.releaseLock();
+                        return;
+                    }
+
+                    setTermOutput((prev) => {
+                        return `${prev}${value}`;
+                    });
+                }, 500);
                 console.log('Ran');
             } catch (e: any) {
                 if (e?.message === 'WebContainer already booted') {
@@ -49,6 +63,14 @@ const CodeBlock = () => {
         })();
     }, []);
 
+    useEffect(() => {
+        (async () => {
+            if (webContainer) {
+                console.log('writing to webcontainer');
+                await webContainer.fs.writeFile('src/victory.js', result);
+            }
+        })();
+    }, [result]);
 
     return (
         <div className="w-10/12">
@@ -57,7 +79,7 @@ const CodeBlock = () => {
             </div>}
             {webContainer && <div className="bg-gray-100 p-4 rounded-md shadow-md">
                 <CodeMirror
-                    value="console.log('hello world!');"
+                    value={result}
                     height="200px"
                     width="100%"
                     extensions={[
@@ -80,8 +102,12 @@ const CodeBlock = () => {
                 />
             </div>}
             {/* Make a result pane for when Ctrl-Enter is pressed */}
+            <div className="bg-gray-100 p-4 rounded-md shadow-md mt-4 h-screen">
+                <iframe src={url} className="w-full h-full" seamless></iframe>
+            </div>
             <div className="bg-gray-100 p-4 rounded-md shadow-md mt-4">
-                <iframe src={url} className="w-full" sandbox="allow-scripts" seamless></iframe>
+                <div className="text-lg font-bold">Terminal Output</div>
+                <div className="text-sm">{termOutput}</div>
             </div>
         </div>
     )
