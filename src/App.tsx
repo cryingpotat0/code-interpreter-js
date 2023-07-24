@@ -5,6 +5,7 @@ import { vim } from "@replit/codemirror-vim";
 import { keymap } from "@codemirror/view";
 import { WebContainer } from "@webcontainer/api";
 import { files } from "./InnerReactWrapper";
+import { ProgressBar, ProgressStep } from './ProgressBar';
 
 const CodeBlock = () => {
     const onChange = useCallback((_value: string, _viewUpdate) => {
@@ -116,9 +117,24 @@ const CodeBlock = () => {
 const App = () => {
 
     return (
-        <div className="bg-white text-gray-600 min-h-screen flex items-center justify-center">
-            <CodeBlock />
-        </div>
+        <>
+            <div className="bg-white text-gray-600 flex text-center items-center justify-center m-3 p-3">
+                <div className="w-6/12">
+                    <ProgressBar<ProgressStep, 'name'>
+                        steps={[
+                            { name: 'Booting' },
+                            { name: 'Mounting' },
+                            { name: 'Installing' },
+                            { name: 'Starting' },
+                        ]}
+                        propertyName={'name'}
+                        currentStep={'Booting'} />
+                </div>
+            </div>
+            <div className="bg-white text-gray-600 min-h-screen flex items-center justify-center">
+                <CodeBlock />
+            </div>
+        </>
     );
 }
 
